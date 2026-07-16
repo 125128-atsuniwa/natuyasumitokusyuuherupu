@@ -1,0 +1,31 @@
+<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8">
+<title>入退室管理</title>
+<style>
+body{font-family:Segoe UI,sans-serif;background:#f3f3f3;display:flex;justify-content:center;align-items:center;height:100vh}
+.card{background:rgba(255,255,255,.9);padding:24px;border-radius:16px;box-shadow:0 8px 24px rgba(0,0,0,.15);width:420px}
+h2{margin-top:0}.row{display:flex;gap:8px;margin:8px 0}
+input,button{padding:10px;border-radius:10px;border:1px solid #ccc}
+button{background:#0078d4;color:#fff;border:none;cursor:pointer}
+table{width:100%;border-collapse:collapse;margin-top:12px}td,th{border-bottom:1px solid #ddd;padding:6px}
+#admin{display:none}
+</style></head><body>
+<div class="card">
+<div id="user">
+<h2>入退室管理（使用者）</h2>
+<div class="row"><input id="name" placeholder="氏名"><button onclick="log('入室')">入室</button><button onclick="log('退室')">退室</button></div>
+<div class="row"><input id="pw" type="password" placeholder="管理者パスワード"><button onclick="admin()">管理者</button></div>
+</div>
+<div id="admin">
+<h2>管理者画面</h2>
+<button onclick="back()">戻る</button>
+<table><thead><tr><th>時刻</th><th>氏名</th><th>種別</th></tr></thead><tbody id="tb"></tbody></table>
+<button onclick="localStorage.removeItem('logs');render()">履歴削除</button>
+</div></div>
+<script>
+function get(){return JSON.parse(localStorage.getItem('logs')||'[]')}
+function save(a){localStorage.setItem('logs',JSON.stringify(a))}
+function log(t){let n=name.value.trim();if(!n){alert('氏名');return;}let a=get();a.push({time:new Date().toLocaleString(),name:n,type:t});save(a);name.value='';alert(t+'しました');}
+function render(){tb.innerHTML='';get().forEach(r=>tb.innerHTML+=`<tr><td>${r.time}</td><td>${r.name}</td><td>${r.type}</td></tr>`)}
+function admin(){if(pw.value==='125128'){user.style.display='none';admin=document.getElementById('admin');admin.style.display='block';render()}else alert('パスワードが違います');}
+function back(){document.getElementById('admin').style.display='none';user.style.display='block';pw.value='';}
+</script></body></html>

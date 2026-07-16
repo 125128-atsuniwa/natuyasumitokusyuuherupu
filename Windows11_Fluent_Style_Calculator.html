@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="ja"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Fluent Style Calculator</title>
+<style>
+*{box-sizing:border-box;font-family:"Segoe UI Variable","Segoe UI",sans-serif}
+body{margin:0;height:100vh;display:flex;align-items:center;justify-content:center;
+background:linear-gradient(135deg,#d9e7f5,#c9d7e8);}
+.calc{width:360px;border-radius:24px;background:rgba(250,250,250,.75);
+backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.7);
+box-shadow:0 20px 50px rgba(0,0,0,.18);overflow:hidden}
+.title{padding:12px 16px;background:rgba(255,255,255,.35);font-weight:600}
+.display{padding:18px;font-size:48px;text-align:right;height:96px}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:12px}
+button{height:60px;border:none;border-radius:16px;background:#fff;font-size:22px;
+box-shadow:0 2px 8px rgba(0,0,0,.08);cursor:pointer;transition:.15s}
+button:hover{transform:translateY(-1px)}
+button:active{transform:scale(.97)}
+.op{background:#ececec}.eq{background:#0a84ff;color:#fff}
+</style></head>
+<body><div class="calc"><div class="title">🧮 電卓</div>
+<div id="d" class="display">0</div>
+<div class="grid">
+<button onclick="c()">AC</button><button onclick="b()">⌫</button><button onclick="p('%')">%</button><button class="op" onclick="p('/')">÷</button>
+<button onclick="p('7')">7</button><button onclick="p('8')">8</button><button onclick="p('9')">9</button><button class="op" onclick="p('*')">×</button>
+<button onclick="p('4')">4</button><button onclick="p('5')">5</button><button onclick="p('6')">6</button><button class="op" onclick="p('-')">−</button>
+<button onclick="p('1')">1</button><button onclick="p('2')">2</button><button onclick="p('3')">3</button><button class="op" onclick="p('+')">＋</button>
+<button onclick="p('0')">0</button><button onclick="p('.')">.</button><button onclick="calc()">=</button><button class="eq" onclick="calc()">＝</button>
+</div></div>
+<script>
+let v="",d=document.getElementById("d");
+function u(){d.textContent=v||"0";}
+function p(x){v+=x;u();}
+function c(){v="";u();}
+function b(){v=v.slice(0,-1);u();}
+function calc(){try{v=Function("return ("+v+")")().toString()}catch{v="Error"}u();}
+addEventListener("keydown",e=>{
+ if("0123456789+-*/.%".includes(e.key))p(e.key);
+ else if(e.key==="Enter")calc();
+ else if(e.key==="Backspace")b();
+ else if(e.key==="Escape")c();
+});
+</script></body></html>

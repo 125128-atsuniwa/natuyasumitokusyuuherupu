@@ -1,0 +1,1268 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ファミリーチャット</title>
+<style>
+  :root{
+    --win-bg:#f3f3f3;
+    --win-accent:#0078d4;
+    --win-accent-hover:#106ebe;
+    --win-accent-press:#005a9e;
+    --win-surface:rgba(255,255,255,0.78);
+    --win-surface-solid:#ffffff;
+    --win-border:rgba(0,0,0,0.08);
+    --win-text:#1b1b1b;
+    --win-text-secondary:#5f6368;
+    --win-danger:#c42b1c;
+    --win-danger-hover:#a4241a;
+    --win-radius:8px;
+    --win-radius-lg:14px;
+    --win-shadow:0 6px 20px rgba(0,0,0,0.12), 0 1px 3px rgba(0,0,0,0.08);
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    font-family:'Segoe UI Variable Text','Segoe UI',system-ui,-apple-system,sans-serif;
+    color:var(--win-text);
+    background:var(--win-bg);
+    -webkit-font-smoothing:antialiased;
+    overflow:hidden;
+  }
+  #shell{
+    width:100vw;height:100vh;
+    display:flex;flex-direction:column;
+    background:var(--win-bg);
+    position:relative;
+  }
+  /* Title bar */
+  .titlebar{
+    height:36px;min-height:36px;
+    display:flex;align-items:center;
+    padding:0 10px;
+    background:rgba(255,255,255,0.6);
+    backdrop-filter:blur(20px) saturate(150%);
+    border-bottom:1px solid var(--win-border);
+    -webkit-user-select:none;user-select:none;
+    gap:8px;
+    z-index:50;
+  }
+  .titlebar .logo{
+    width:16px;height:16px;border-radius:3px;
+    background:linear-gradient(135deg,#0078d4,#59b0f0);
+    display:inline-block;
+  }
+  .titlebar .name{font-size:12px;color:var(--win-text-secondary);font-weight:600;}
+  .titlebar .dots{margin-left:auto;display:flex;gap:6px;}
+  .titlebar .dots span{width:11px;height:11px;border-radius:50%;display:inline-block;opacity:.35;}
+  .titlebar .dots span:nth-child(1){background:#ffbd44;}
+  .titlebar .dots span:nth-child(2){background:#00ca4e;}
+  .titlebar .dots span:nth-child(3){background:#ff605c;}
+
+  #app{flex:1;min-height:0;position:relative;overflow:hidden;}
+
+  /* ===== Login screens ===== */
+  .lockwrap{
+    position:absolute;inset:0;
+    background:
+      radial-gradient(circle at 15% 20%, rgba(255,255,255,0.35), transparent 40%),
+      radial-gradient(circle at 85% 15%, rgba(120,200,255,0.55), transparent 45%),
+      radial-gradient(circle at 75% 85%, rgba(120,80,220,0.45), transparent 50%),
+      radial-gradient(circle at 20% 90%, rgba(0,150,180,0.45), transparent 45%),
+      linear-gradient(160deg,#0a3d62 0%, #1e5c97 35%, #2f6fae 60%, #123a6b 100%);
+    display:flex;align-items:center;justify-content:center;
+    animation:bloomIn 900ms ease;
+  }
+  @keyframes bloomIn{from{opacity:0;transform:scale(1.02);}to{opacity:1;transform:scale(1);}}
+  .lockcard{
+    width:380px;max-width:90vw;
+    background:var(--win-surface);
+    backdrop-filter:blur(30px) saturate(160%);
+    border:1px solid rgba(255,255,255,0.4);
+    border-radius:var(--win-radius-lg);
+    box-shadow:var(--win-shadow);
+    padding:36px 32px 28px;
+    text-align:center;
+    animation:cardUp 500ms cubic-bezier(.2,.8,.2,1);
+  }
+  @keyframes cardUp{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);}}
+  .avatar-circle{
+    width:76px;height:76px;border-radius:50%;
+    margin:0 auto 14px;
+    background:linear-gradient(135deg,#0078d4,#59b0f0);
+    display:flex;align-items:center;justify-content:center;
+    color:#fff;font-size:30px;font-weight:600;
+    box-shadow:0 4px 14px rgba(0,120,212,0.4);
+  }
+  .lockcard h1{font-size:19px;margin:0 0 2px;font-weight:600;}
+  .lockcard p.sub{margin:0 0 20px;color:var(--win-text-secondary);font-size:13px;}
+
+  .field-label{font-size:12px;color:var(--win-text-secondary);text-align:left;margin:0 0 6px 2px;font-weight:600;}
+  .input-row{position:relative;margin-bottom:14px;}
+  .win-input{
+    width:100%;
+    padding:10px 40px 10px 12px;
+    border-radius:var(--win-radius);
+    border:1px solid var(--win-border);
+    background:rgba(255,255,255,0.9);
+    font-size:15px;
+    outline:none;
+    font-family:inherit;
+    color:var(--win-text);
+    transition:border-color .15s, box-shadow .15s;
+  }
+  .win-input:focus{border-color:var(--win-accent);box-shadow:0 0 0 3px rgba(0,120,212,0.18);}
+  .win-input.pin-mask{-webkit-text-security:disc;text-security:disc;letter-spacing:4px;}
+  .reveal-btn{
+    position:absolute;right:6px;top:50%;transform:translateY(-50%);
+    width:28px;height:28px;border:none;background:transparent;cursor:pointer;
+    border-radius:6px;display:flex;align-items:center;justify-content:center;
+    color:var(--win-text-secondary);
+  }
+  .reveal-btn:hover{background:rgba(0,0,0,0.06);}
+
+  .keypad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:14px 0;}
+  .key{
+    padding:12px 0;border-radius:var(--win-radius);
+    border:1px solid var(--win-border);background:rgba(255,255,255,0.85);
+    font-size:16px;cursor:pointer;transition:background .12s, transform .08s;
+    font-family:inherit;color:var(--win-text);
+  }
+  .key:hover{background:#eef4fb;}
+  .key:active{transform:scale(0.94);background:#dceafb;}
+  .key.wide{grid-column:span 1;}
+
+  .btn{
+    display:inline-flex;align-items:center;justify-content:center;gap:6px;
+    padding:9px 18px;border-radius:var(--win-radius);
+    border:1px solid var(--win-border);
+    background:rgba(255,255,255,0.9);
+    font-size:14px;font-weight:600;cursor:pointer;
+    font-family:inherit;color:var(--win-text);
+    transition:background .12s, transform .05s, box-shadow .12s;
+    -webkit-user-select:none;user-select:none;
+  }
+  .btn:hover{background:#f2f2f2;}
+  .btn:active{transform:scale(0.97);}
+  .btn-primary{background:var(--win-accent);color:#fff;border-color:var(--win-accent);}
+  .btn-primary:hover{background:var(--win-accent-hover);}
+  .btn-primary:active{background:var(--win-accent-press);}
+  .btn-primary:disabled{opacity:.45;cursor:not-allowed;}
+  .btn-danger{background:var(--win-danger);color:#fff;border-color:var(--win-danger);}
+  .btn-danger:hover{background:var(--win-danger-hover);}
+  .btn-block{width:100%;}
+  .btn-subtle{background:transparent;border-color:transparent;color:var(--win-text-secondary);}
+  .btn-subtle:hover{background:rgba(0,0,0,0.06);}
+
+  .error-msg{
+    color:var(--win-danger);font-size:12.5px;margin:-6px 0 12px;text-align:left;
+    display:flex;align-items:center;gap:5px;min-height:16px;
+  }
+
+  .switch-mode{
+    margin-top:18px;font-size:12.5px;color:rgba(255,255,255,0.85);
+    text-shadow:0 1px 3px rgba(0,0,0,0.3);
+  }
+  .switch-mode a{color:#fff;text-decoration:underline;cursor:pointer;font-weight:600;}
+  .back-btn{
+    position:absolute;top:14px;left:14px;
+    color:#fff;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);
+    backdrop-filter:blur(10px);
+  }
+  .back-btn:hover{background:rgba(255,255,255,0.25);}
+
+  /* ===== App shells (admin panel / user app) ===== */
+  .app-shell{position:absolute;inset:0;display:flex;background:var(--win-bg);}
+  .sidebar{
+    width:250px;min-width:250px;
+    background:rgba(255,255,255,0.6);
+    backdrop-filter:blur(24px) saturate(150%);
+    border-right:1px solid var(--win-border);
+    display:flex;flex-direction:column;
+    padding:14px 10px;
+  }
+  .sidebar-header{display:flex;align-items:center;gap:10px;padding:6px 8px 16px;}
+  .sidebar-header .avatar-sm{
+    width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#0078d4,#59b0f0);
+    display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:14px;flex-shrink:0;
+  }
+  .sidebar-header .who{overflow:hidden;}
+  .sidebar-header .who .nm{font-size:13.5px;font-weight:700;white-space:nowrap;text-overflow:ellipsis;overflow:hidden;}
+  .sidebar-header .who .role{font-size:11px;color:var(--win-text-secondary);}
+
+  .nav-item{
+    display:flex;align-items:center;gap:10px;
+    padding:9px 12px;border-radius:var(--win-radius);
+    font-size:13.5px;font-weight:600;color:var(--win-text);
+    cursor:pointer;margin-bottom:3px;
+  }
+  .nav-item:hover{background:rgba(0,0,0,0.05);}
+  .nav-item.active{background:rgba(0,120,212,0.12);color:var(--win-accent);}
+  .nav-item .ic{width:18px;text-align:center;}
+
+  .sidebar-footer{margin-top:auto;padding-top:10px;border-top:1px solid var(--win-border);}
+
+  .main-pane{flex:1;min-width:0;display:flex;flex-direction:column;position:relative;}
+  .content{flex:1;min-height:0;overflow-y:auto;padding:26px 32px;}
+  .content h2{margin:0 0 4px;font-size:22px;font-weight:700;}
+  .content p.desc{margin:0 0 22px;color:var(--win-text-secondary);font-size:13.5px;}
+
+  .card{
+    background:var(--win-surface-solid);
+    border:1px solid var(--win-border);
+    border-radius:var(--win-radius-lg);
+    box-shadow:0 1px 2px rgba(0,0,0,0.04);
+  }
+  .settings-card{padding:18px 20px;margin-bottom:16px;}
+  .settings-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--win-border);}
+  .settings-row:last-child{border-bottom:none;}
+
+  .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-bottom:20px;}
+  .stat-card{padding:18px;text-align:left;}
+  .stat-card .num{font-size:28px;font-weight:700;color:var(--win-accent);}
+  .stat-card .lbl{font-size:12.5px;color:var(--win-text-secondary);margin-top:4px;}
+
+  table.win-table{width:100%;border-collapse:collapse;font-size:13.5px;}
+  table.win-table th{text-align:left;padding:9px 10px;color:var(--win-text-secondary);font-weight:600;font-size:12px;border-bottom:1px solid var(--win-border);}
+  table.win-table td{padding:10px 10px;border-bottom:1px solid var(--win-border);vertical-align:middle;}
+  table.win-table tr:last-child td{border-bottom:none;}
+  .pill{display:inline-block;padding:2px 9px;border-radius:20px;background:rgba(0,120,212,0.1);color:var(--win-accent);font-size:11.5px;font-weight:700;}
+
+  .icon-btn{
+    width:30px;height:30px;border-radius:6px;border:1px solid var(--win-border);
+    background:#fff;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;
+    font-size:13px;
+  }
+  .icon-btn:hover{background:#f2f2f2;}
+  .icon-btn.danger:hover{background:#fdeceb;color:var(--win-danger);border-color:#f3c6c1;}
+
+  .inline-form{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;}
+  .inline-form .fld{display:flex;flex-direction:column;gap:5px;}
+  .inline-form label{font-size:11.5px;color:var(--win-text-secondary);font-weight:600;}
+  .inline-form input{padding:8px 10px;border-radius:6px;border:1px solid var(--win-border);font-size:13.5px;font-family:inherit;min-width:140px;}
+  .inline-form input:focus{outline:none;border-color:var(--win-accent);box-shadow:0 0 0 3px rgba(0,120,212,0.15);}
+
+  .empty-state{text-align:center;padding:50px 20px;color:var(--win-text-secondary);}
+  .empty-state .big{font-size:34px;margin-bottom:10px;}
+  .empty-state .t1{font-size:14.5px;font-weight:600;color:var(--win-text);margin-bottom:4px;}
+  .empty-state .t2{font-size:12.5px;}
+
+  /* Chat layout (user app) */
+  .chat-shell{flex:1;display:flex;min-height:0;}
+  .chat-list{width:290px;min-width:290px;border-right:1px solid var(--win-border);display:flex;flex-direction:column;background:rgba(255,255,255,0.5);}
+  .chat-list-head{padding:16px 16px 10px;display:flex;align-items:center;justify-content:space-between;}
+  .chat-list-head h3{margin:0;font-size:16px;}
+  .chat-items{flex:1;overflow-y:auto;padding:4px 8px;}
+  .chat-item{
+    display:flex;align-items:center;gap:10px;padding:10px;border-radius:var(--win-radius);
+    cursor:pointer;margin-bottom:2px;
+  }
+  .chat-item:hover{background:rgba(0,0,0,0.05);}
+  .chat-item.active{background:rgba(0,120,212,0.12);}
+  .chat-avatar{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#7a5af5,#59b0f0);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;flex-shrink:0;}
+  .chat-item .meta{overflow:hidden;flex:1;}
+  .chat-item .meta .cname{font-size:13.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .chat-item .meta .last{font-size:11.5px;color:var(--win-text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+
+  .thread{flex:1;display:flex;flex-direction:column;min-width:0;}
+  .thread-head{padding:14px 20px;border-bottom:1px solid var(--win-border);display:flex;align-items:center;gap:12px;background:rgba(255,255,255,0.6);}
+  .thread-head .cname{font-size:15px;font-weight:700;}
+  .thread-head .members{font-size:11.5px;color:var(--win-text-secondary);}
+  .thread-body{flex:1;overflow-y:auto;padding:18px 24px;display:flex;flex-direction:column;gap:10px;}
+  .msg{max-width:60%;padding:9px 13px;border-radius:14px;font-size:13.5px;line-height:1.45;position:relative;}
+  .msg .who{font-size:11px;font-weight:700;margin-bottom:2px;opacity:0.75;}
+  .msg .ts{font-size:10px;opacity:0.55;margin-top:3px;}
+  .msg.me{align-self:flex-end;background:var(--win-accent);color:#fff;border-bottom-right-radius:4px;}
+  .msg.other{align-self:flex-start;background:#fff;border:1px solid var(--win-border);border-bottom-left-radius:4px;}
+  .thread-input{padding:14px 20px;border-top:1px solid var(--win-border);display:flex;gap:10px;background:rgba(255,255,255,0.6);}
+  .thread-input textarea{
+    flex:1;resize:none;border-radius:var(--win-radius);border:1px solid var(--win-border);
+    padding:10px 12px;font-family:inherit;font-size:13.5px;outline:none;max-height:100px;
+  }
+  .thread-input textarea:focus{border-color:var(--win-accent);box-shadow:0 0 0 3px rgba(0,120,212,0.15);}
+
+  /* Modal */
+  .modal-overlay{
+    position:absolute;inset:0;background:rgba(0,0,0,0.35);backdrop-filter:blur(2px);
+    display:flex;align-items:center;justify-content:center;z-index:200;
+    animation:fadeIn 150ms ease;
+  }
+  @keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
+  .modal{
+    width:420px;max-width:92vw;max-height:85vh;overflow-y:auto;
+    background:#fff;border-radius:var(--win-radius-lg);box-shadow:var(--win-shadow);
+    padding:22px 24px;animation:cardUp 220ms cubic-bezier(.2,.8,.2,1);
+  }
+  .modal h3{margin:0 0 14px;font-size:16.5px;}
+  .modal .modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:18px;}
+  .member-chip{display:inline-flex;align-items:center;gap:6px;background:#f2f5fa;border-radius:20px;padding:4px 6px 4px 12px;font-size:12.5px;margin:3px 4px 3px 0;}
+  .member-chip button{border:none;background:transparent;cursor:pointer;color:var(--win-text-secondary);width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;}
+  .member-chip button:hover{background:#dde6f0;color:var(--win-danger);}
+
+  /* Toast */
+  #toast-wrap{position:absolute;top:44px;right:16px;z-index:400;display:flex;flex-direction:column;gap:8px;}
+  .toast{
+    background:#fff;border:1px solid var(--win-border);border-left:4px solid var(--win-accent);
+    border-radius:8px;box-shadow:var(--win-shadow);padding:12px 16px;font-size:13px;min-width:220px;max-width:320px;
+    animation:toastIn 220ms cubic-bezier(.2,.8,.2,1);
+  }
+  .toast.err{border-left-color:var(--win-danger);}
+  @keyframes toastIn{from{opacity:0;transform:translateX(20px);}to{opacity:1;transform:translateX(0);}}
+
+  .clockpill{
+    position:absolute;bottom:14px;right:16px;
+    background:rgba(255,255,255,0.18);backdrop-filter:blur(10px);
+    color:#fff;padding:8px 14px;border-radius:10px;font-size:12px;text-align:right;
+    border:1px solid rgba(255,255,255,0.25);z-index:10;line-height:1.4;
+  }
+
+  ::-webkit-scrollbar{width:9px;height:9px;}
+  ::-webkit-scrollbar-thumb{background:rgba(0,0,0,0.18);border-radius:10px;}
+  ::-webkit-scrollbar-thumb:hover{background:rgba(0,0,0,0.3);}
+
+  @keyframes shake{
+    10%,90%{transform:translateX(-1px);}
+    20%,80%{transform:translateX(2px);}
+    30%,50%,70%{transform:translateX(-4px);}
+    40%,60%{transform:translateX(4px);}
+  }
+  .shake{animation:shake 0.4s;}
+
+  @media (max-width:720px){
+    .sidebar{width:74px;min-width:74px;padding:14px 6px;}
+    .sidebar-header .who,.nav-item span.lbl{display:none;}
+    .sidebar-header{justify-content:center;}
+    .nav-item{justify-content:center;}
+    .chat-list{width:100%;position:absolute;inset:0;z-index:5;background:var(--win-bg);}
+    .chat-list.hide-mobile{display:none;}
+    .thread{width:100%;}
+    .msg{max-width:80%;}
+  }
+</style>
+</head>
+<body>
+<div id="shell">
+  <div class="titlebar">
+    <span class="logo"></span>
+    <span class="name">ファミリーチャット</span>
+    <div class="dots"><span></span><span></span><span></span></div>
+  </div>
+  <div id="app"></div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var ADMIN_PIN = "125128";
+  var USERS_KEY = "family_users";
+  var CHATS_KEY = "family_chats";
+
+  var state = {
+    screen: "start",           // start | admin-login | user-login | admin-panel | user-app
+    adminPinValue: "",
+    adminPinError: "",
+    userLoginName: "",
+    userLoginPin: "",
+    userLoginError: "",
+    currentUser: null,         // username string when logged in as user
+    adminPanelTab: "overview", // overview | users | chats
+    activeChatId: null,
+    usersCache: [],
+    chatsCache: [],
+    pollTimer: null,
+    lastChatsSignature: ""
+  };
+
+  // ---------- storage helpers ----------
+  function safeParse(str, fallback){
+    try{ var v = JSON.parse(str); return v; }catch(e){ return fallback; }
+  }
+
+  function getUsers(){
+    return window.storage.get(USERS_KEY, true)
+      .then(function(res){ return safeParse(res && res.value, []); })
+      .catch(function(){ return []; });
+  }
+  function setUsers(arr){
+    return window.storage.set(USERS_KEY, JSON.stringify(arr), true);
+  }
+  function getChats(){
+    return window.storage.get(CHATS_KEY, true)
+      .then(function(res){ return safeParse(res && res.value, []); })
+      .catch(function(){ return []; });
+  }
+  function setChats(arr){
+    return window.storage.set(CHATS_KEY, JSON.stringify(arr), true);
+  }
+
+  function uid(){
+    if(window.crypto && window.crypto.randomUUID) return window.crypto.randomUUID();
+    return 'id-' + Date.now() + '-' + Math.random().toString(16).slice(2);
+  }
+
+  function escapeHtml(s){
+    return String(s == null ? "" : s).replace(/[&<>"']/g, function(c){
+      return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];
+    });
+  }
+
+  function initials(name){
+    if(!name) return "?";
+    return name.trim().slice(0,1).toUpperCase();
+  }
+
+  function fmtTime(ts){
+    try{
+      var d = new Date(ts);
+      return d.toLocaleString('ja-JP', {month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit'});
+    }catch(e){ return ""; }
+  }
+
+  // ---------- toast ----------
+  function toast(msg, type){
+    var wrap = document.getElementById('toast-wrap');
+    if(!wrap) return;
+    var t = document.createElement('div');
+    t.className = 'toast' + (type === 'err' ? ' err' : '');
+    t.textContent = msg;
+    wrap.appendChild(t);
+    setTimeout(function(){
+      t.style.transition = 'opacity .3s, transform .3s';
+      t.style.opacity = '0';
+      t.style.transform = 'translateX(20px)';
+      setTimeout(function(){ t.remove(); }, 320);
+    }, 2600);
+  }
+
+  // ---------- app root ----------
+  var app = document.getElementById('app');
+
+  function setScreen(s){
+    state.screen = s;
+    render();
+  }
+
+  function render(){
+    stopPolling();
+    var html = "";
+    if(state.screen === "start") html = renderStart();
+    else if(state.screen === "admin-login") html = renderAdminLogin();
+    else if(state.screen === "user-login") html = renderUserLogin();
+    else if(state.screen === "admin-panel") html = renderAdminPanel();
+    else if(state.screen === "user-app") html = renderUserApp();
+
+    app.innerHTML = html + '<div id="toast-wrap"></div>';
+    afterRender();
+  }
+
+  // ================= START =================
+  function renderStart(){
+    return (
+      '<div class="lockwrap">'+
+        '<div class="lockcard">'+
+          '<div class="avatar-circle">🏠</div>'+
+          '<h1>ファミリーチャットへようこそ</h1>'+
+          '<p class="sub">ログイン方法を選択してください</p>'+
+          '<button class="btn btn-primary btn-block" id="go-user" style="margin-bottom:10px;padding:12px;">👤　使用者ログイン</button>'+
+          '<button class="btn btn-block" id="go-admin" style="padding:12px;">🛡️　管理者ログイン</button>'+
+        '</div>'+
+        clockPill()+
+      '</div>'
+    );
+  }
+
+  // ================= ADMIN LOGIN =================
+  function renderAdminLogin(){
+    return (
+      '<div class="lockwrap">'+
+        '<button class="btn back-btn" id="back-start">← 戻る</button>'+
+        '<div class="lockcard">'+
+          '<div class="avatar-circle">🛡️</div>'+
+          '<h1>管理者ログイン</h1>'+
+          '<p class="sub">管理者PINを入力してください</p>'+
+          '<div class="input-row">'+
+            '<input type="text" inputmode="numeric" autocomplete="off" class="win-input pin-mask" id="admin-pin-input" placeholder="PIN" maxlength="10" value="'+escapeHtml(state.adminPinValue)+'">'+
+            '<button class="reveal-btn" id="admin-reveal" title="PINを表示">👁</button>'+
+          '</div>'+
+          '<div class="error-msg" id="admin-pin-err">'+(state.adminPinError ? '⚠ '+escapeHtml(state.adminPinError) : '')+'</div>'+
+          '<div class="keypad" id="admin-keypad">'+
+            [1,2,3,4,5,6,7,8,9].map(function(n){return '<button class="key" data-k="'+n+'">'+n+'</button>';}).join('')+
+            '<button class="key" data-k="clear">C</button>'+
+            '<button class="key" data-k="0">0</button>'+
+            '<button class="key" data-k="back">⌫</button>'+
+          '</div>'+
+          '<button class="btn btn-primary btn-block" id="admin-submit" style="padding:11px;">サインイン</button>'+
+        '</div>'+
+        clockPill()+
+      '</div>'
+    );
+  }
+
+  // ================= USER LOGIN =================
+  function renderUserLogin(){
+    return (
+      '<div class="lockwrap">'+
+        '<button class="btn back-btn" id="back-start">← 戻る</button>'+
+        '<div class="lockcard">'+
+          '<div class="avatar-circle">👤</div>'+
+          '<h1>使用者ログイン</h1>'+
+          '<p class="sub">ユーザー名とPINを入力してください</p>'+
+          '<div class="field-label">ユーザー名</div>'+
+          '<div class="input-row">'+
+            '<input type="text" autocomplete="off" class="win-input" id="user-name-input" placeholder="ユーザー名" value="'+escapeHtml(state.userLoginName)+'">'+
+          '</div>'+
+          '<div class="field-label">PIN</div>'+
+          '<div class="input-row">'+
+            '<input type="text" inputmode="numeric" autocomplete="off" class="win-input pin-mask" id="user-pin-input" placeholder="PIN" maxlength="10" value="'+escapeHtml(state.userLoginPin)+'">'+
+            '<button class="reveal-btn" id="user-reveal" title="PINを表示">👁</button>'+
+          '</div>'+
+          '<div class="error-msg" id="user-login-err">'+(state.userLoginError ? '⚠ '+escapeHtml(state.userLoginError) : '')+'</div>'+
+          '<button class="btn btn-primary btn-block" id="user-submit" style="padding:11px;">サインイン</button>'+
+        '</div>'+
+        clockPill()+
+      '</div>'
+    );
+  }
+
+  function clockPill(){
+    var now = new Date();
+    var time = now.toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'});
+    var date = now.toLocaleDateString('ja-JP',{month:'long',day:'numeric',weekday:'short'});
+    return '<div class="clockpill" id="clockpill"><div style="font-size:15px;font-weight:600;">'+time+'</div><div>'+date+'</div></div>';
+  }
+
+  // ================= ADMIN PANEL =================
+  function renderAdminPanel(){
+    var tab = state.adminPanelTab;
+    var body = "";
+    if(tab === "overview") body = renderAdminOverview();
+    else if(tab === "users") body = renderAdminUsers();
+    else if(tab === "chats") body = renderAdminChats();
+
+    return (
+      '<div class="app-shell">'+
+        '<div class="sidebar">'+
+          '<div class="sidebar-header">'+
+            '<div class="avatar-sm">🛡️</div>'+
+            '<div class="who"><div class="nm">管理者</div><div class="role">Administrator</div></div>'+
+          '</div>'+
+          navItem('overview','📊','概要', tab)+
+          navItem('users','👥','ユーザー管理', tab)+
+          navItem('chats','💬','チャット管理', tab)+
+          '<div class="sidebar-footer">'+
+            '<button class="nav-item" id="admin-logout" style="width:100%;border:none;background:transparent;"><span class="ic">🚪</span><span class="lbl">サインアウト</span></button>'+
+          '</div>'+
+        '</div>'+
+        '<div class="main-pane"><div class="content">'+body+'</div></div>'+
+      '</div>'
+    );
+  }
+
+  function navItem(key, icon, label, activeTab){
+    return '<div class="nav-item'+(key===activeTab?' active':'')+'" data-tab="'+key+'"><span class="ic">'+icon+'</span><span class="lbl">'+label+'</span></div>';
+  }
+
+  function renderAdminOverview(){
+    var users = state.usersCache, chats = state.chatsCache;
+    var totalMsgs = chats.reduce(function(s,c){ return s + (c.messages ? c.messages.length : 0); }, 0);
+    return (
+      '<h2>概要</h2><p class="desc">ファミリーチャットの利用状況</p>'+
+      '<div class="stat-grid">'+
+        '<div class="card stat-card"><div class="num">'+users.length+'</div><div class="lbl">登録ユーザー数</div></div>'+
+        '<div class="card stat-card"><div class="num">'+chats.length+'</div><div class="lbl">チャット数</div></div>'+
+        '<div class="card stat-card"><div class="num">'+totalMsgs+'</div><div class="lbl">総メッセージ数</div></div>'+
+      '</div>'+
+      '<div class="card settings-card">'+
+        '<div class="settings-row"><div><b>管理者アカウント</b><div style="color:var(--win-text-secondary);font-size:12.5px;">すべてのユーザーとチャットを管理できます</div></div><span class="pill">Administrator</span></div>'+
+      '</div>'
+    );
+  }
+
+  function renderAdminUsers(){
+    var users = state.usersCache;
+    var rows = users.length ? users.map(function(u){
+      return '<tr>'+
+        '<td>'+escapeHtml(u.username)+'</td>'+
+        '<td><span style="letter-spacing:2px;">'+escapeHtml(u.pin)+'</span></td>'+
+        '<td style="text-align:right;">'+
+          '<button class="icon-btn" data-action="edit-user" data-username="'+escapeHtml(u.username)+'" title="PINを変更">✏️</button> '+
+          '<button class="icon-btn danger" data-action="del-user" data-username="'+escapeHtml(u.username)+'" title="削除">🗑</button>'+
+        '</td>'+
+      '</tr>';
+    }).join('') : '';
+
+    return (
+      '<h2>ユーザー管理</h2><p class="desc">使用者アカウントの追加・編集・削除ができます</p>'+
+      '<div class="card settings-card">'+
+        '<div class="field-label" style="margin-bottom:10px;">新しいユーザーを追加</div>'+
+        '<div class="inline-form">'+
+          '<div class="fld"><label>ユーザー名</label><input type="text" id="new-user-name" placeholder="例: たろう"></div>'+
+          '<div class="fld"><label>PIN（数字4〜8桁）</label><input type="text" inputmode="numeric" id="new-user-pin" placeholder="例: 1234"></div>'+
+          '<button class="btn btn-primary" id="add-user-btn">＋ 追加</button>'+
+        '</div>'+
+        '<div class="error-msg" id="add-user-err"></div>'+
+      '</div>'+
+      '<div class="card" style="padding:6px 20px 16px;">'+
+        (users.length ?
+          '<table class="win-table"><thead><tr><th>ユーザー名</th><th>PIN</th><th style="text-align:right;">操作</th></tr></thead><tbody>'+rows+'</tbody></table>'
+          : '<div class="empty-state"><div class="big">👥</div><div class="t1">まだユーザーがいません</div><div class="t2">上のフォームから最初のユーザーを追加しましょう</div></div>')+
+      '</div>'
+    );
+  }
+
+  function renderAdminChats(){
+    var chats = state.chatsCache;
+    var cards = chats.length ? chats.map(function(c){
+      var mCount = c.messages ? c.messages.length : 0;
+      return '<div class="card settings-card" style="margin-bottom:12px;">'+
+        '<div style="display:flex;justify-content:space-between;align-items:flex-start;">'+
+          '<div>'+
+            '<div style="font-weight:700;font-size:14.5px;">'+escapeHtml(c.name)+'</div>'+
+            '<div style="color:var(--win-text-secondary);font-size:12px;margin-top:3px;">作成者: '+escapeHtml(c.createdBy)+' ・ メンバー: '+escapeHtml((c.members||[]).join(', '))+'</div>'+
+            '<div style="color:var(--win-text-secondary);font-size:12px;">メッセージ数: '+mCount+'</div>'+
+          '</div>'+
+          '<div style="display:flex;gap:6px;">'+
+            '<button class="btn" data-action="view-chat-admin" data-id="'+c.id+'">開く</button>'+
+            '<button class="btn btn-danger" data-action="del-chat" data-id="'+c.id+'">削除</button>'+
+          '</div>'+
+        '</div>'+
+      '</div>';
+    }).join('') : '<div class="card"><div class="empty-state"><div class="big">💬</div><div class="t1">チャットがまだありません</div><div class="t2">使用者がチャットを作成するとここに表示されます</div></div></div>';
+
+    return '<h2>チャット管理</h2><p class="desc">すべてのチャットを閲覧・管理できます</p>' + cards;
+  }
+
+  // ================= USER APP =================
+  function renderUserApp(){
+    var chats = state.chatsCache.filter(function(c){
+      return (c.members||[]).indexOf(state.currentUser) !== -1;
+    }).sort(function(a,b){
+      var la = a.messages && a.messages.length ? a.messages[a.messages.length-1].ts : a.createdAt;
+      var lb = b.messages && b.messages.length ? b.messages[b.messages.length-1].ts : b.createdAt;
+      return lb - la;
+    });
+
+    var activeChat = chats.find(function(c){ return c.id === state.activeChatId; }) || null;
+
+    var listHtml = chats.length ? chats.map(function(c){
+      var last = (c.messages && c.messages.length) ? c.messages[c.messages.length-1] : null;
+      var lastText = last ? (last.sender===state.currentUser?'自分: ':escapeHtml(last.sender)+': ') + escapeHtml(last.text) : 'まだメッセージがありません';
+      return '<div class="chat-item'+(activeChat && activeChat.id===c.id ? ' active':'')+'" data-action="open-chat" data-id="'+c.id+'">'+
+        '<div class="chat-avatar">'+initials(c.name)+'</div>'+
+        '<div class="meta"><div class="cname">'+escapeHtml(c.name)+'</div><div class="last">'+lastText+'</div></div>'+
+      '</div>';
+    }).join('') : '<div class="empty-state"><div class="big">💬</div><div class="t1">チャットがありません</div><div class="t2">右上の＋から新しいチャットを作成しましょう</div></div>';
+
+    var threadHtml;
+    if(activeChat){
+      var msgs = activeChat.messages || [];
+      var msgHtml = msgs.length ? msgs.map(function(m){
+        var mine = m.sender === state.currentUser;
+        return '<div class="msg '+(mine?'me':'other')+'">'+
+          (!mine ? '<div class="who">'+escapeHtml(m.sender)+'</div>' : '')+
+          '<div class="txt">'+escapeHtml(m.text)+'</div>'+
+          '<div class="ts">'+fmtTime(m.ts)+'</div>'+
+        '</div>';
+      }).join('') : '<div class="empty-state"><div class="big">✉️</div><div class="t1">まだメッセージがありません</div><div class="t2">最初のメッセージを送ってみましょう</div></div>';
+
+      threadHtml =
+        '<div class="thread">'+
+          '<div class="thread-head">'+
+            '<div class="chat-avatar">'+initials(activeChat.name)+'</div>'+
+            '<div style="flex:1;min-width:0;">'+
+              '<div class="cname">'+escapeHtml(activeChat.name)+'</div>'+
+              '<div class="members">'+escapeHtml((activeChat.members||[]).join(', '))+'</div>'+
+            '</div>'+
+            '<button class="btn" id="add-member-btn">＋ メンバー追加</button>'+
+          '</div>'+
+          '<div class="thread-body" id="thread-body">'+msgHtml+'</div>'+
+          '<div class="thread-input">'+
+            '<textarea id="msg-input" rows="1" placeholder="メッセージを入力..."></textarea>'+
+            '<button class="btn btn-primary" id="send-msg-btn">送信</button>'+
+          '</div>'+
+        '</div>';
+    } else {
+      threadHtml = '<div class="thread"><div class="content" style="display:flex;align-items:center;justify-content:center;height:100%;"><div class="empty-state"><div class="big">💬</div><div class="t1">チャットを選択してください</div><div class="t2">左のリストからチャットを開くか、新規作成してください</div></div></div></div>';
+    }
+
+    return (
+      '<div class="app-shell">'+
+        '<div class="sidebar" style="width:64px;min-width:64px;align-items:center;">'+
+          '<div class="sidebar-header" style="flex-direction:column;padding-top:6px;">'+
+            '<div class="avatar-sm">'+initials(state.currentUser)+'</div>'+
+          '</div>'+
+          '<div class="sidebar-footer" style="width:100%;">'+
+            '<button class="nav-item" id="user-logout" style="width:100%;justify-content:center;border:none;background:transparent;" title="サインアウト"><span class="ic">🚪</span></button>'+
+          '</div>'+
+        '</div>'+
+        '<div class="chat-shell">'+
+          '<div class="chat-list">'+
+            '<div class="chat-list-head"><h3>'+escapeHtml(state.currentUser)+'</h3><button class="icon-btn" id="new-chat-btn" title="新しいチャット">＋</button></div>'+
+            '<div class="chat-items">'+listHtml+'</div>'+
+          '</div>'+
+          threadHtml+
+        '</div>'+
+      '</div>'
+    );
+  }
+
+  // ================= MODALS =================
+  function openModal(innerHtml){
+    var overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.id = 'modal-overlay';
+    overlay.innerHTML = '<div class="modal">'+innerHtml+'</div>';
+    overlay.addEventListener('mousedown', function(e){
+      if(e.target === overlay) closeModal();
+    });
+    document.getElementById('shell').appendChild(overlay);
+    document.addEventListener('keydown', escCloseHandler);
+    return overlay;
+  }
+  function escCloseHandler(e){
+    if(e.key === 'Escape') closeModal();
+  }
+  function closeModal(){
+    var m = document.getElementById('modal-overlay');
+    if(m) m.remove();
+    document.removeEventListener('keydown', escCloseHandler);
+  }
+
+  function confirmDialog(message, onYes){
+    var overlay = openModal(
+      '<h3>確認</h3>'+
+      '<div style="font-size:13.5px;color:var(--win-text-secondary);margin-bottom:4px;">'+escapeHtml(message)+'</div>'+
+      '<div class="modal-actions">'+
+        '<button class="btn" id="confirm-no">キャンセル</button>'+
+        '<button class="btn btn-danger" id="confirm-yes">削除する</button>'+
+      '</div>'
+    );
+    overlay.querySelector('#confirm-no').addEventListener('click', closeModal);
+    overlay.querySelector('#confirm-yes').addEventListener('click', function(){
+      closeModal();
+      onYes();
+    });
+  }
+
+  function openNewChatModal(){
+    var overlay = openModal(
+      '<h3>新しいチャットを作成</h3>'+
+      '<div class="field-label">チャット名</div>'+
+      '<input type="text" class="win-input" id="new-chat-name" placeholder="例: 家族グループ" style="margin-bottom:12px;">'+
+      '<div class="field-label">最初のメンバーを追加（ユーザー名、任意）</div>'+
+      '<div style="display:flex;gap:8px;margin-bottom:6px;">'+
+        '<input type="text" class="win-input" id="new-chat-member" placeholder="ユーザー名">'+
+        '<button class="btn" id="new-chat-add-member" style="white-space:nowrap;">追加</button>'+
+      '</div>'+
+      '<div id="new-chat-members-list"></div>'+
+      '<div class="error-msg" id="new-chat-err"></div>'+
+      '<div class="modal-actions">'+
+        '<button class="btn" id="new-chat-cancel">キャンセル</button>'+
+        '<button class="btn btn-primary" id="new-chat-create">作成</button>'+
+      '</div>'
+    );
+
+    var pendingMembers = [];
+    function renderMembers(){
+      var list = overlay.querySelector('#new-chat-members-list');
+      list.innerHTML = pendingMembers.map(function(m){
+        return '<span class="member-chip">'+escapeHtml(m)+'<button data-m="'+escapeHtml(m)+'">✕</button></span>';
+      }).join('');
+      list.querySelectorAll('button').forEach(function(b){
+        b.addEventListener('click', function(){
+          pendingMembers = pendingMembers.filter(function(x){ return x !== b.getAttribute('data-m'); });
+          renderMembers();
+        });
+      });
+    }
+
+    overlay.querySelector('#new-chat-add-member').addEventListener('click', function(){
+      var input = overlay.querySelector('#new-chat-member');
+      var name = input.value.trim();
+      var errEl = overlay.querySelector('#new-chat-err');
+      errEl.textContent = '';
+      if(!name) return;
+      if(name === state.currentUser){ errEl.textContent = '⚠ 自分は自動的に追加されます'; return; }
+      var exists = state.usersCache.some(function(u){ return u.username === name; });
+      if(!exists){ errEl.textContent = '⚠ そのユーザーは存在しません'; return; }
+      if(pendingMembers.indexOf(name) !== -1){ errEl.textContent = '⚠ すでに追加されています'; return; }
+      pendingMembers.push(name);
+      input.value = '';
+      renderMembers();
+    });
+
+    overlay.querySelector('#new-chat-cancel').addEventListener('click', closeModal);
+    overlay.querySelector('#new-chat-create').addEventListener('click', function(){
+      var nameInput = overlay.querySelector('#new-chat-name');
+      var name = nameInput.value.trim();
+      var errEl = overlay.querySelector('#new-chat-err');
+      if(!name){ errEl.textContent = '⚠ チャット名を入力してください'; nameInput.focus(); return; }
+      var members = [state.currentUser].concat(pendingMembers.filter(function(m){ return m !== state.currentUser; }));
+      var newChat = {
+        id: uid(),
+        name: name,
+        members: members,
+        messages: [],
+        createdBy: state.currentUser,
+        createdAt: Date.now()
+      };
+      getChats().then(function(chats){
+        chats.push(newChat);
+        return setChats(chats).then(function(){
+          state.chatsCache = chats;
+          state.activeChatId = newChat.id;
+          closeModal();
+          toast('チャットを作成しました');
+          render();
+        });
+      }).catch(function(){
+        toast('チャットの作成に失敗しました', 'err');
+      });
+    });
+  }
+
+  function openAddMemberModal(chat){
+    var overlay = openModal(
+      '<h3>メンバーを追加</h3>'+
+      '<div class="field-label">現在のメンバー</div>'+
+      '<div style="margin-bottom:12px;">'+(chat.members||[]).map(function(m){
+        return '<span class="member-chip">'+escapeHtml(m)+'</span>';
+      }).join('')+'</div>'+
+      '<div class="field-label">ユーザー名を入力して共有</div>'+
+      '<div style="display:flex;gap:8px;">'+
+        '<input type="text" class="win-input" id="add-member-input" placeholder="ユーザー名">'+
+        '<button class="btn btn-primary" id="add-member-confirm" style="white-space:nowrap;">追加</button>'+
+      '</div>'+
+      '<div class="error-msg" id="add-member-err"></div>'+
+      '<div class="modal-actions"><button class="btn" id="add-member-close">閉じる</button></div>'
+    );
+    overlay.querySelector('#add-member-close').addEventListener('click', closeModal);
+    overlay.querySelector('#add-member-confirm').addEventListener('click', function(){
+      var input = overlay.querySelector('#add-member-input');
+      var errEl = overlay.querySelector('#add-member-err');
+      var name = input.value.trim();
+      errEl.textContent = '';
+      if(!name){ errEl.textContent = '⚠ ユーザー名を入力してください'; return; }
+      var exists = state.usersCache.some(function(u){ return u.username === name; });
+      if(!exists){ errEl.textContent = '⚠ そのユーザーは存在しません'; return; }
+      if((chat.members||[]).indexOf(name) !== -1){ errEl.textContent = '⚠ すでにメンバーです'; return; }
+      getChats().then(function(chats){
+        var c = chats.find(function(x){ return x.id === chat.id; });
+        if(!c){ toast('チャットが見つかりません', 'err'); closeModal(); return; }
+        c.members = (c.members || []).concat([name]);
+        return setChats(chats).then(function(){
+          state.chatsCache = chats;
+          closeModal();
+          toast(name + 'さんを追加しました');
+          render();
+        });
+      }).catch(function(){
+        toast('追加に失敗しました', 'err');
+      });
+    });
+  }
+
+  function openEditUserModal(username){
+    var user = state.usersCache.find(function(u){ return u.username === username; });
+    if(!user) return;
+    var overlay = openModal(
+      '<h3>PINを変更 — '+escapeHtml(username)+'</h3>'+
+      '<div class="field-label">新しいPIN（数字4〜8桁）</div>'+
+      '<input type="text" inputmode="numeric" class="win-input" id="edit-pin-input" placeholder="新しいPIN" style="margin-bottom:6px;">'+
+      '<div class="error-msg" id="edit-pin-err"></div>'+
+      '<div class="modal-actions">'+
+        '<button class="btn" id="edit-cancel">キャンセル</button>'+
+        '<button class="btn btn-primary" id="edit-save">保存</button>'+
+      '</div>'
+    );
+    overlay.querySelector('#edit-cancel').addEventListener('click', closeModal);
+    overlay.querySelector('#edit-save').addEventListener('click', function(){
+      var pin = overlay.querySelector('#edit-pin-input').value.trim();
+      var errEl = overlay.querySelector('#edit-pin-err');
+      if(!/^\d{4,8}$/.test(pin)){ errEl.textContent = '⚠ 4〜8桁の数字で入力してください'; return; }
+      getUsers().then(function(users){
+        var u = users.find(function(x){ return x.username === username; });
+        if(!u){ toast('ユーザーが見つかりません', 'err'); closeModal(); return; }
+        u.pin = pin;
+        return setUsers(users).then(function(){
+          state.usersCache = users;
+          closeModal();
+          toast('PINを更新しました');
+          render();
+        });
+      }).catch(function(){ toast('更新に失敗しました', 'err'); });
+    });
+  }
+
+  function openAdminChatViewModal(chatId){
+    var chat = state.chatsCache.find(function(c){ return c.id === chatId; });
+    if(!chat) return;
+    var msgs = chat.messages || [];
+    var msgHtml = msgs.length ? msgs.map(function(m){
+      return '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;padding:8px 0;border-bottom:1px solid var(--win-border);">'+
+        '<div style="min-width:0;"><div style="font-size:12px;font-weight:700;">'+escapeHtml(m.sender)+' <span style="font-weight:400;color:var(--win-text-secondary);">'+fmtTime(m.ts)+'</span></div>'+
+        '<div style="font-size:13px;margin-top:2px;word-break:break-word;">'+escapeHtml(m.text)+'</div></div>'+
+        '<button class="icon-btn danger" data-mid="'+m.id+'" title="削除" style="flex-shrink:0;">🗑</button>'+
+      '</div>';
+    }).join('') : '<div class="empty-state"><div class="t2">メッセージがありません</div></div>';
+
+    var overlay = openModal(
+      '<h3>'+escapeHtml(chat.name)+'</h3>'+
+      '<div class="field-label">メンバー</div>'+
+      '<div style="margin-bottom:12px;">'+(chat.members||[]).map(function(m){
+        return '<span class="member-chip">'+escapeHtml(m)+'<button data-rm="'+escapeHtml(m)+'">✕</button></span>';
+      }).join('')+'</div>'+
+      '<div class="field-label">メッセージ</div>'+
+      '<div style="max-height:260px;overflow-y:auto;">'+msgHtml+'</div>'+
+      '<div class="modal-actions"><button class="btn" id="admin-chat-close">閉じる</button></div>'
+    );
+
+    overlay.querySelector('#admin-chat-close').addEventListener('click', closeModal);
+
+    overlay.querySelectorAll('[data-rm]').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        var uname = btn.getAttribute('data-rm');
+        getChats().then(function(chats){
+          var c = chats.find(function(x){ return x.id === chatId; });
+          if(!c) return;
+          c.members = (c.members||[]).filter(function(m){ return m !== uname; });
+          return setChats(chats).then(function(){
+            state.chatsCache = chats;
+            closeModal();
+            toast('メンバーを削除しました');
+            render();
+          });
+        }).catch(function(){ toast('操作に失敗しました', 'err'); });
+      });
+    });
+
+    overlay.querySelectorAll('[data-mid]').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        var mid = btn.getAttribute('data-mid');
+        getChats().then(function(chats){
+          var c = chats.find(function(x){ return x.id === chatId; });
+          if(!c) return;
+          c.messages = (c.messages||[]).filter(function(m){ return m.id !== mid; });
+          return setChats(chats).then(function(){
+            state.chatsCache = chats;
+            closeModal();
+            toast('メッセージを削除しました');
+            render();
+          });
+        }).catch(function(){ toast('操作に失敗しました', 'err'); });
+      });
+    });
+  }
+
+  // ================= EVENT WIRING =================
+  function afterRender(){
+    var s = state.screen;
+
+    if(s === 'start'){
+      byId('go-user').addEventListener('click', function(){ state.userLoginError=''; setScreen('user-login'); });
+      byId('go-admin').addEventListener('click', function(){ state.adminPinError=''; setScreen('admin-login'); });
+      startClock();
+    }
+
+    else if(s === 'admin-login'){
+      byId('back-start').addEventListener('click', function(){ state.adminPinValue=''; state.adminPinError=''; setScreen('start'); });
+      var pinInput = byId('admin-pin-input');
+      pinInput.focus();
+      pinInput.addEventListener('input', function(){
+        state.adminPinValue = pinInput.value.replace(/\D/g,'');
+        pinInput.value = state.adminPinValue;
+      });
+      pinInput.addEventListener('keydown', function(e){ if(e.key === 'Enter') doAdminLogin(); });
+      byId('admin-reveal').addEventListener('click', function(){
+        pinInput.classList.toggle('pin-mask');
+      });
+      byId('admin-keypad').addEventListener('click', function(e){
+        var btn = e.target.closest('.key');
+        if(!btn) return;
+        var k = btn.getAttribute('data-k');
+        if(k === 'back') state.adminPinValue = state.adminPinValue.slice(0,-1);
+        else if(k === 'clear') state.adminPinValue = '';
+        else state.adminPinValue += k;
+        pinInput.value = state.adminPinValue;
+        pinInput.focus();
+      });
+      byId('admin-submit').addEventListener('click', doAdminLogin);
+      startClock();
+    }
+
+    else if(s === 'user-login'){
+      byId('back-start').addEventListener('click', function(){ state.userLoginError=''; setScreen('start'); });
+      var nameInput = byId('user-name-input');
+      var pinInput2 = byId('user-pin-input');
+      nameInput.addEventListener('input', function(){ state.userLoginName = nameInput.value; });
+      pinInput2.addEventListener('input', function(){
+        state.userLoginPin = pinInput2.value.replace(/\D/g,'');
+        pinInput2.value = state.userLoginPin;
+      });
+      [nameInput,pinInput2].forEach(function(inp){
+        inp.addEventListener('keydown', function(e){ if(e.key === 'Enter') doUserLogin(); });
+      });
+      byId('user-reveal').addEventListener('click', function(){ pinInput2.classList.toggle('pin-mask'); });
+      byId('user-submit').addEventListener('click', doUserLogin);
+      if(state.userLoginName) pinInput2.focus(); else nameInput.focus();
+      startClock();
+    }
+
+    else if(s === 'admin-panel'){
+      wireAdminNav();
+      byId('admin-logout').addEventListener('click', function(){
+        state.currentUser = null;
+        state.adminPinValue = '';
+        setScreen('start');
+      });
+      if(state.adminPanelTab === 'users') wireAdminUsersTab();
+      if(state.adminPanelTab === 'chats') wireAdminChatsTab();
+    }
+
+    else if(s === 'user-app'){
+      wireUserApp();
+      startPolling();
+    }
+  }
+
+  function byId(id){ return document.getElementById(id); }
+
+  function startClock(){
+    var el = byId('clockpill');
+    if(!el) return;
+    if(state.clockTimer) clearInterval(state.clockTimer);
+    state.clockTimer = setInterval(function(){
+      var elx = byId('clockpill');
+      if(!elx){ clearInterval(state.clockTimer); return; }
+      var now = new Date();
+      elx.innerHTML = '<div style="font-size:15px;font-weight:600;">'+now.toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'})+'</div><div>'+now.toLocaleDateString('ja-JP',{month:'long',day:'numeric',weekday:'short'})+'</div>';
+    }, 1000);
+  }
+
+  function doAdminLogin(){
+    if(state.adminPinValue === ADMIN_PIN){
+      state.currentUser = null;
+      state.adminPinValue = '';
+      state.adminPinError = '';
+      Promise.all([getUsers(), getChats()]).then(function(res){
+        state.usersCache = res[0];
+        state.chatsCache = res[1];
+        state.adminPanelTab = 'overview';
+        setScreen('admin-panel');
+      }).catch(function(){
+        state.usersCache = []; state.chatsCache = [];
+        setScreen('admin-panel');
+      });
+    } else {
+      state.adminPinError = 'PINが正しくありません';
+      render();
+      var card = document.querySelector('.lockcard');
+      if(card){ card.classList.add('shake'); setTimeout(function(){ card.classList.remove('shake'); }, 400); }
+    }
+  }
+
+  function doUserLogin(){
+    var name = state.userLoginName.trim();
+    var pin = state.userLoginPin.trim();
+    if(!name || !pin){
+      state.userLoginError = 'ユーザー名とPINを入力してください';
+      render();
+      return;
+    }
+    getUsers().then(function(users){
+      state.usersCache = users;
+      var match = users.find(function(u){ return u.username === name && u.pin === pin; });
+      if(match){
+        return getChats().then(function(chats){
+          state.chatsCache = chats;
+          state.currentUser = name;
+          state.activeChatId = null;
+          state.userLoginError = '';
+          state.userLoginPin = '';
+          setScreen('user-app');
+        });
+      } else {
+        state.userLoginError = 'ユーザー名またはPINが正しくありません';
+        render();
+        var card = document.querySelector('.lockcard');
+        if(card){ card.classList.add('shake'); setTimeout(function(){ card.classList.remove('shake'); }, 400); }
+      }
+    }).catch(function(){
+      state.userLoginError = 'ログインに失敗しました。もう一度お試しください';
+      render();
+    });
+  }
+
+  function wireAdminNav(){
+    document.querySelectorAll('.nav-item[data-tab]').forEach(function(el){
+      el.addEventListener('click', function(){
+        state.adminPanelTab = el.getAttribute('data-tab');
+        Promise.all([getUsers(), getChats()]).then(function(res){
+          state.usersCache = res[0];
+          state.chatsCache = res[1];
+          render();
+        }).catch(function(){ render(); });
+      });
+    });
+  }
+
+  function wireAdminUsersTab(){
+    byId('add-user-btn').addEventListener('click', function(){
+      var nameInput = byId('new-user-name');
+      var pinInput = byId('new-user-pin');
+      var errEl = byId('add-user-err');
+      var name = nameInput.value.trim();
+      var pin = pinInput.value.trim();
+      errEl.textContent = '';
+      if(!name){ errEl.textContent = '⚠ ユーザー名を入力してください'; return; }
+      if(!/^\d{4,8}$/.test(pin)){ errEl.textContent = '⚠ PINは4〜8桁の数字で入力してください'; return; }
+      getUsers().then(function(users){
+        if(users.some(function(u){ return u.username === name; })){
+          errEl.textContent = '⚠ そのユーザー名はすでに使われています';
+          return;
+        }
+        users.push({username:name, pin:pin, createdAt: Date.now()});
+        return setUsers(users).then(function(){
+          state.usersCache = users;
+          toast(name + 'さんを追加しました');
+          render();
+        });
+      }).catch(function(){ errEl.textContent = '⚠ 追加に失敗しました'; });
+    });
+
+    document.querySelectorAll('[data-action="edit-user"]').forEach(function(btn){
+      btn.addEventListener('click', function(){ openEditUserModal(btn.getAttribute('data-username')); });
+    });
+    document.querySelectorAll('[data-action="del-user"]').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        var uname = btn.getAttribute('data-username');
+        confirmDialog('「'+uname+'」を削除しますか？この操作は取り消せません。', function(){
+          getUsers().then(function(users){
+            users = users.filter(function(u){ return u.username !== uname; });
+            return setUsers(users).then(function(){
+              state.usersCache = users;
+              toast('ユーザーを削除しました');
+              render();
+            });
+          }).catch(function(){ toast('削除に失敗しました', 'err'); });
+        });
+      });
+    });
+  }
+
+  function wireAdminChatsTab(){
+    document.querySelectorAll('[data-action="view-chat-admin"]').forEach(function(btn){
+      btn.addEventListener('click', function(){ openAdminChatViewModal(btn.getAttribute('data-id')); });
+    });
+    document.querySelectorAll('[data-action="del-chat"]').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        var id = btn.getAttribute('data-id');
+        confirmDialog('このチャットを削除しますか？すべてのメッセージが失われます。', function(){
+          getChats().then(function(chats){
+            chats = chats.filter(function(c){ return c.id !== id; });
+            return setChats(chats).then(function(){
+              state.chatsCache = chats;
+              toast('チャットを削除しました');
+              render();
+            });
+          }).catch(function(){ toast('削除に失敗しました', 'err'); });
+        });
+      });
+    });
+  }
+
+  function wireUserApp(){
+    byId('user-logout').addEventListener('click', function(){
+      stopPolling();
+      state.currentUser = null;
+      state.activeChatId = null;
+      setScreen('start');
+    });
+    byId('new-chat-btn').addEventListener('click', openNewChatModal);
+
+    document.querySelectorAll('[data-action="open-chat"]').forEach(function(el){
+      el.addEventListener('click', function(){
+        state.activeChatId = el.getAttribute('data-id');
+        render();
+      });
+    });
+
+    var addMemberBtn = byId('add-member-btn');
+    if(addMemberBtn){
+      addMemberBtn.addEventListener('click', function(){
+        var chat = state.chatsCache.find(function(c){ return c.id === state.activeChatId; });
+        if(chat) openAddMemberModal(chat);
+      });
+    }
+
+    var sendBtn = byId('send-msg-btn');
+    var msgInput = byId('msg-input');
+    if(sendBtn && msgInput){
+      function doSend(){
+        var text = msgInput.value.trim();
+        if(!text) return;
+        var chatId = state.activeChatId;
+        getChats().then(function(chats){
+          var c = chats.find(function(x){ return x.id === chatId; });
+          if(!c){ toast('チャットが見つかりません', 'err'); return; }
+          c.messages = c.messages || [];
+          c.messages.push({id: uid(), sender: state.currentUser, text: text, ts: Date.now()});
+          return setChats(chats).then(function(){
+            state.chatsCache = chats;
+            msgInput.value = '';
+            render();
+            var tb = byId('thread-body');
+            if(tb) tb.scrollTop = tb.scrollHeight;
+            var mi = byId('msg-input');
+            if(mi) mi.focus();
+          });
+        }).catch(function(){ toast('送信に失敗しました', 'err'); });
+      }
+      sendBtn.addEventListener('click', doSend);
+      msgInput.addEventListener('keydown', function(e){
+        if(e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); doSend(); }
+      });
+      msgInput.focus();
+    }
+
+    var tb2 = byId('thread-body');
+    if(tb2) tb2.scrollTop = tb2.scrollHeight;
+  }
+
+  // ---------- polling for near-live updates ----------
+  function startPolling(){
+    stopPolling();
+    state.pollTimer = setInterval(function(){
+      if(state.screen !== 'user-app') { stopPolling(); return; }
+      getChats().then(function(chats){
+        var sig = JSON.stringify(chats);
+        if(sig !== state.lastChatsSignature){
+          state.lastChatsSignature = sig;
+          state.chatsCache = chats;
+          // avoid disrupting typing: only re-render if not actively composing long text
+          var mi = byId('msg-input');
+          var wasFocused = mi && document.activeElement === mi;
+          var draft = mi ? mi.value : '';
+          render();
+          if(wasFocused){
+            var mi2 = byId('msg-input');
+            if(mi2){ mi2.value = draft; mi2.focus(); }
+          }
+        }
+      }).catch(function(){});
+    }, 3500);
+  }
+  function stopPolling(){
+    if(state.pollTimer){ clearInterval(state.pollTimer); state.pollTimer = null; }
+    if(state.clockTimer){ clearInterval(state.clockTimer); state.clockTimer = null; }
+  }
+
+  // ---------- init ----------
+  render();
+})();
+</script>
+</body>
+</html>
